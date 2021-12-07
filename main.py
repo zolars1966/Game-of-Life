@@ -71,8 +71,6 @@ def main():
                 return 0
 
         draw_blocks(screen, xlen, ylen, world, scale, color)
-        
-        # screen.blit(surf, (0, 0))
 
         N = compute_neighbours(world)
 
