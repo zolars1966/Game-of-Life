@@ -1,0 +1,116 @@
+from random import randint
+import numpy as np
+import pygame
+import sys
+
+
+def compute_neighbours(Z, N):
+    # start_time = pygame.time.get_ticks()
+
+    N[1:-1,1:-1] = Z[:-2, :-2] + Z[1:-1, :-2] + Z[:-2, 1:-1] \
+                 + Z[2:,  :-2]                + Z[2:,  1:-1] \
+                 + Z[:-2,  2:] + Z[1:-1,  2:] + Z[2:,    2:]
+
+    # print("compute neighbours ", (pygame.time.get_ticks() - start_time)/1000)
+    return N
+
+
+def iterate(Z, N, M):
+    # start_time = pygame.time.get_ticks()
+    N = compute_neighbours(Z, N)
+
+    birth = ((N == 3) & (Z == 0))
+    survive = ((N == 2) | (N == 3)) & (Z == 1)
+
+    Z[...] = 0
+    Z[birth | survive] = 1
+
+    M[M > 63.25] = 63.25
+    M *= 0.995
+    M[Z == 1] = 255
+
+    # print("iterate ", (pygame.time.get_ticks() - start_time)/1000)
+
+
+def vmake(pix, state):
+    vec = np.vectorize(make)
+    vec(pix, state)
+
+
+def make(pix, state):
+    if state:
+        pix *= 0
+
+
+def draw_blocks(screen, xlen, ylen, world):
+    # start_time = pygame.time.get_ticks()
+    # pix = np.zeros((world.shape[0], world.shape[1], 3))
+    # pix += 255
+
+    # vmake(pix, world)
+
+    surf = pygame.surfarray.make_surface(world)
+    
+    screen.blit(surf, (-1, -1))
+    
+    # print("draw ", (pygame.time.get_ticks() - start_time)/1000)
+
+
+def make_random_grid(x, y):
+    Zgrid = np.random.randint(0, 2, size=(x, y))
+
+    Zgrid[::2, :] *= 0
+    Zgrid[:, 0] *= 0
+    Zgrid[:, -1] *= 0
+    Zgrid[-1] *= 0
+    
+    return Zgrid
+
+
+def make_clear_grid(x, y):
+    grid = np.zeros((x, y))
+    
+    return grid
+
+
+def main():
+    xmax = int(sys.argv[1])
+    ymax = int(sys.argv[2])
+
+    screen = pygame.display.set_mode((xmax, ymax), pygame.SCALED)
+    clock = pygame.time.Clock()
+
+    h = 0
+    xlen = xmax + 2
+    ylen = ymax + 2
+    Zworld = make_random_grid(xlen, ylen)
+    Oworld = np.zeros(Zworld.shape)
+    play = False
+    Green = np.zeros_like(Zworld)
+    Blue = np.zeros_like(Zworld)
+
+    N = np.zeros_like(Zworld)
+    
+    while True:
+        screen.fill("black")
+
+        keys = pygame.key.get_pressed()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return 0
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    play = not play
+
+        draw_blocks(screen, xlen, ylen, np.stack((Oworld, Oworld, Oworld), axis=2))
+        
+        if play:
+            iterate(Zworld, N, Oworld)
+
+        pygame.display.set_caption("$~GoL ~fps: " + str(round(clock.get_fps(), 2)) + " ~" + str(np.count_nonzero(Zworld)))
+
+        pygame.display.flip()
+        clock.tick()
+
+if __name__ == '__main__':
+    main()
